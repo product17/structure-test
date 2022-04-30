@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "id": "modid",
+  "id": "labyrinth",
   "version": "${version}",
 
   "name": "Example Mod",
@@ -14,16 +14,19 @@
   },
 
   "license": "CC0-1.0",
-  "icon": "assets/modid/icon.png",
+  "icon": "assets/labyrinth/icon.png",
 
   "environment": "*",
   "entrypoints": {
+    "client": [
+      "net.fabricmc.example.client.LabyrinthClientMod"
+    ],
     "main": [
       "net.fabricmc.example.ExampleMod"
     ]
   },
   "mixins": [
-    "modid.mixins.json"
+    "labyrinth.mixins.json"
   ],
 
   "depends": {

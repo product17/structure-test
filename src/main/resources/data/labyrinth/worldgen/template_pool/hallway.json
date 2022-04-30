@@ -1,0 +1,33 @@
+{
+    "name": "labyrinth:hallway",
+    "fallback": "minecraft:empty",
+    "elements": [
+        {
+            "weight": 50,
+            "element": {
+                "location": "minecraft:hallway",
+                "processors": "labyrinth:jigsaw_processor",
+                "projection": "rigid",
+                "element_type": "minecraft:single_pool_element"
+            }
+        },
+        {
+            "weight": 50,
+            "element": {
+                "location": "minecraft:hallway_angle",
+                "processors": "labyrinth:jigsaw_processor",
+                "projection": "rigid",
+                "element_type": "minecraft:single_pool_element"
+            }
+        },
+        {
+            "weight": 50,
+            "element": {
+                "location": "minecraft:hallway_path",
+                "processors": "labyrinth:jigsaw_processor",
+                "projection": "rigid",
+                "element_type": "minecraft:single_pool_element"
+            }
+        }
+    ]
+}

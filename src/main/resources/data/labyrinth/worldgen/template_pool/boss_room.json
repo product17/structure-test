@@ -1,0 +1,15 @@
+{
+    "name": "labyrinth:boss_room",
+    "fallback": "minecraft:empty",
+    "elements": [
+        {
+            "weight": 50,
+            "element": {
+                "location": "minecraft:boss_room",
+                "processors": "labyrinth:jigsaw_processor",
+                "projection": "rigid",
+                "element_type": "minecraft:single_pool_element"
+            }
+        }
+    ]
+}
