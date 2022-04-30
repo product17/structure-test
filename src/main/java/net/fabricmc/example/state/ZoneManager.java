@@ -37,6 +37,7 @@ public class ZoneManager {
     // Active Labyrinths
     private static Map<UUID, Zone> activeZones = new HashMap<>();
     private static Map<UUID, UUID> playerToZoneMap = new HashMap<>();
+    private static Random random = new Random();
     
     public static void addLabyrinth(UUID key, Zone lab) {
         ZoneManager.activeZones.put(key, lab);
@@ -102,7 +103,7 @@ public class ZoneManager {
             placementData.addProcessor(new SpawnProcessor(structConfig));
 
             // Place the Start Structure
-            startStructure.place(serverWorld, startLocation, null, placementData, new Random(serverWorld.getSeed()), 0);
+            startStructure.place(serverWorld, startLocation, null, placementData, ZoneManager.random, 0);
 
             int depth = 0; // preventing an infinite loop... starting at 0
             BlockRotation mainPathRotationAlignment = null;
@@ -152,9 +153,9 @@ public class ZoneManager {
                             // add more items for this while to process, until done)
                             // NOTE: this can cause an infinite loop if there is no max size
                             StructurePlacementData pathPlacementData = new StructurePlacementData()
-                                    .setMirror(BlockMirror.NONE);
-                            pathPlacementData.addProcessor(
-                                    new JigsawProcessor(structConfig));
+                                .setMirror(BlockMirror.NONE);
+                            pathPlacementData.addProcessor(new JigsawProcessor(structConfig));
+                            pathPlacementData.addProcessor(new SpawnProcessor(structConfig));
 
                             // Get the target Jigsaw blocks in the chosen structure
                             List<StructureBlockInfo> structBlocks = pathStructure
@@ -185,8 +186,7 @@ public class ZoneManager {
                                 int zDiff = structBlockPos.getZ() - mainPathBlockPos.getZ();
                                 BlockPos shift = new BlockPos(xDiff, yDiff, zDiff);
                                 BlockPos updatedPos = structBlockPos.add(shift);
-                                pathStructure.place(serverWorld, updatedPos, null, pathPlacementData,
-                                        new Random(serverWorld.getSeed()), 0);
+                                pathStructure.place(serverWorld, updatedPos, null, pathPlacementData, ZoneManager.random, 0);
 
                                 // Remove the Jigsaw Blocks
                                 // world.setBlockState(structBlockPos, Registry.BLOCK.get(new Identifier("air")).getDefaultState());

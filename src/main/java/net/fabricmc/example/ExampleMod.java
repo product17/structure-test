@@ -56,17 +56,17 @@ public class ExampleMod implements ModInitializer {
 
 		// LootFunctionType.register();
 
-		LootTableLoadingCallback.EVENT.register((resourceManager, lootManager, id, table, setter) -> {
-			if (id.toString().startsWith("test_dungeon")) {
-				table.withFunction(SetLootLevelFunction.builder(ConstantLootNumberProvider.create(2.0f)).build());
-				// LootTable lootTable = lootManager.getTable(new Identifier("test_dungeon:chests/test_loot"));
-				// lootTable.
-				// table.withPool(table.build());
-			}
-			// System.out.println();
-			// table.getPools();
-			// table = FabricLootSupplierBuilder.of(lootManager.getTable(id));
-		});
+		// LootTableLoadingCallback.EVENT.register((resourceManager, lootManager, id, table, setter) -> {
+		// 	if (id.toString().startsWith("test_dungeon")) {
+		// 		table.withFunction(SetLootLevelFunction.builder(ConstantLootNumberProvider.create(2.0f)).build());
+		// 		// LootTable lootTable = lootManager.getTable(new Identifier("test_dungeon:chests/test_loot"));
+		// 		// lootTable.
+		// 		// table.withPool(table.build());
+		// 	}
+		// 	// System.out.println();
+		// 	// table.getPools();
+		// 	// table = FabricLootSupplierBuilder.of(lootManager.getTable(id));
+		// });
 
 		Registry.register(Registry.STRUCTURE_PROCESSOR, new Identifier(modId, "jigsaw_processor"), JIGSAW_PROCESSOR);
 

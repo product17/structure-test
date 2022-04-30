@@ -18,6 +18,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.WorldView;
 
 public class SpawnProcessor extends StructureProcessor {
+    public static Random random = new Random();
     public static final Codec<SpawnProcessor> CODEC = Codec.unit(new SpawnProcessor(new StructureBuildQueue("")));
     private StructureBuildQueue config;
 
@@ -44,6 +45,7 @@ public class SpawnProcessor extends StructureProcessor {
         if (state.isOf(Blocks.CHEST)) {
             NbtCompound nbt = structureBlockInfo.nbt;
             nbt.putString("LootTable", "test_dungeon:chests/test_loot");
+            nbt.putLong("LootTableSeed", SpawnProcessor.random.nextLong());
 
             // nbt.put
             // TODO: looks like some kind of seed needs to be passed in as well
