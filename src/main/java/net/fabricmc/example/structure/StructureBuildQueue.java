@@ -21,7 +21,7 @@ public class StructureBuildQueue {
     public static LinkedList<StructureBlockInfo> mainPathQueue = new LinkedList<>();
     public static LinkedList<JigsawBlockEntity> jigsawQueue = new LinkedList<>();
     public LinkedList<BlockPos> spawnPositions = new LinkedList<>();
-    public Block spawnBlockType;
+    public Block playerSpawnBlockType;
 
     public StructureBuildQueue(String spawnBlockTypeString) {
         // reset them on create
@@ -31,10 +31,10 @@ public class StructureBuildQueue {
         try {
             BlockArgumentParser blockArgumentParser = new BlockArgumentParser(blockString, false).parse(true);
             BlockState blockState = blockArgumentParser.getBlockState();
-            this.spawnBlockType = blockState.getBlock();
+            this.playerSpawnBlockType = blockState.getBlock();
         } catch(CommandSyntaxException exception) {
             ExampleMod.LOGGER.info(exception.getMessage());
-            this.spawnBlockType = Blocks.TARGET; // Default to target block
+            this.playerSpawnBlockType = Blocks.TARGET; // Default to target block
         }
     }
 
