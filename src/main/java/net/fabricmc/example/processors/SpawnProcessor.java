@@ -45,7 +45,7 @@ public class SpawnProcessor extends StructureProcessor {
         if (state.isOf(Blocks.CHEST)) {
             NbtCompound nbt = structureBlockInfo.nbt;
             nbt.putString("LootTable", "test_dungeon:chests/test_loot");
-            nbt.putLong("LootTableSeed", SpawnProcessor.random.nextLong());
+            // nbt.putLong("LootTableSeed", SpawnProcessor.random.nextLong());
 
             // nbt.put
             // TODO: looks like some kind of seed needs to be passed in as well
