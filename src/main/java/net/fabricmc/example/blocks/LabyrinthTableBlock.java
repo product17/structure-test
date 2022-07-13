@@ -1,11 +1,18 @@
 package net.fabricmc.example.blocks;
 
+import java.util.Random;
+import java.util.UUID;
+
 import net.fabricmc.example.blockEntities.LabyrinthTableBlockEntity;
 import net.fabricmc.example.items.ItemLoader;
+import net.fabricmc.example.state.Zone;
+import net.fabricmc.example.state.ZoneManager;
 import net.minecraft.block.BlockRenderType;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.BlockWithEntity;
 import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.block.entity.BlockEntityTicker;
+import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
@@ -37,5 +44,9 @@ public class LabyrinthTableBlock extends BlockWithEntity {
 	public BlockRenderType getRenderType(BlockState state) {
 		return BlockRenderType.MODEL;
 	}
-    
+
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state, BlockEntityType<T> type) {
+        return checkType(type, ItemLoader.LABYRNITH_BLOCK_ENTITY, (world1, pos, state1, be) -> LabyrinthTableBlockEntity.tick(world, pos, state, be));
+    }
 }

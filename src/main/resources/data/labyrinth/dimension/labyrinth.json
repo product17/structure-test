@@ -1,17 +1,15 @@
 {
-    "type": "minecraft:overworld",
-    "generator": {
-        "type": "minecraft:flat",
-        "settings": {
-            "layers": [
-                {
-                    "block": "minecraft:grass_block",
-                    "height": 1
-                }
-            ],
-            "structures": {
-                "structures": {}
-            }
-        }
+  "type": "minecraft:overworld",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "minecraft:mushroom_fields",
+      "lakes": false,
+      "features": false,
+      "layers": [],
+      "structures": {
+        "structures": {}
+      }
     }
+  }
 }

@@ -1,13 +1,12 @@
 package net.fabricmc.example.blockEntities;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import com.google.gson.Gson;
-
 import org.apache.commons.lang3.StringUtils;
+
+import com.google.gson.Gson;
 
 import io.github.cottonmc.cotton.gui.networking.NetworkSide;
 import io.github.cottonmc.cotton.gui.networking.ScreenNetworking;
@@ -17,6 +16,7 @@ import net.fabricmc.example.inventories.ConfigLabyrinthTableGui;
 import net.fabricmc.example.inventories.LabyrinthTableGui;
 import net.fabricmc.example.inventories.LabyrinthTableInventory;
 import net.fabricmc.example.inventories.data.ConfigLabyrinthTableData;
+import net.fabricmc.example.inventories.data.CurrentZoneData;
 import net.fabricmc.example.items.ItemLoader;
 import net.fabricmc.example.state.Zone;
 import net.fabricmc.example.state.ZoneManager;
@@ -35,10 +35,11 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
 public class LabyrinthTableBlockEntity extends BlockEntity implements LabyrinthTableInventory, ExtendedScreenHandlerFactory {
     public static final String CONFING_UPDATE_EVENT = "button_selected";
-    private ArrayList<String> targetZoneList = new ArrayList<>();
+    private ArrayList<String> targetZoneList = new ArrayList<>(); // list of zones that can be selected
     private UUID zoneInstanceId;
     private final String TARGET_ZONE_LIST = "target_zone_list";
     private final DefaultedList<ItemStack> items = DefaultedList.ofSize(4, ItemStack.EMPTY);
@@ -47,8 +48,29 @@ public class LabyrinthTableBlockEntity extends BlockEntity implements LabyrinthT
         super(ItemLoader.LABYRNITH_BLOCK_ENTITY, pos, state);
     }
 
+    public UUID getZoneUuid() {
+        return this.zoneInstanceId;
+    }
+
     public Boolean isConfigMenu(PlayerEntity player) {
         return player.isSneaking() && player.isCreative();
+    }
+
+    public static void tick(World world, BlockPos pos, BlockState state, LabyrinthTableBlockEntity be) {
+        if (be.zoneInstanceId != null) {
+            Zone zone = ZoneManager.getZone(be.zoneInstanceId);
+
+            if (zone == null) {
+                // make sure to set zoneInstanceId to null to prevent this from looping
+                be.zoneInstanceId = null;
+                return;
+            }
+
+            if (zone.getPlayerCount() == 0) {
+                // Once the zone hits the max ticks it will remove itself
+                zone.incrementEmptyTicks();
+            }
+        }
     }
 
     @Override
@@ -123,7 +145,7 @@ public class LabyrinthTableBlockEntity extends BlockEntity implements LabyrinthT
             String buttonPress = buf.readString();
             System.out.println("Button was pressed: " + buttonPress + " : " + pos.toShortString() + " : " + pos.toString());
             
-            Optional<Zone> zoneOpt = ZoneManager.generateZone(world, inventory.player, buttonPress);
+            Optional<Zone> zoneOpt = ZoneManager.generateZone(world, inventory.player, pos, buttonPress);
             if (zoneOpt.isPresent()) {
                 // TODO: emit zone selection to other player in inventory
                 this.zoneInstanceId = zoneOpt.get().getId();
@@ -143,8 +165,9 @@ public class LabyrinthTableBlockEntity extends BlockEntity implements LabyrinthT
 
     @Override
     public void writeScreenOpeningData(ServerPlayerEntity player, PacketByteBuf buf) {
+        Gson gson = new Gson();
+
         if (this.isConfigMenu(player)) {
-            Gson gson = new Gson();
             ConfigLabyrinthTableData configData = new ConfigLabyrinthTableData();
             configData.zoneList = new ArrayList<String>(LoadConfig.zones.keySet());
             configData.selectedZoneList = this.targetZoneList;
@@ -154,7 +177,15 @@ public class LabyrinthTableBlockEntity extends BlockEntity implements LabyrinthT
             return;
         }
 
+        Zone existingZone = ZoneManager.getZoneAtLocation(player.getWorld().getDimension(), pos);
+        CurrentZoneData zoneData = new CurrentZoneData();
+        zoneData.zoneName = "test_dungeon:base_lab";
+        zoneData.blockPos = pos;
+        zoneData.active = existingZone != null;
+
+        System.out.println(gson.toJson(zoneData));
+
         // TODO: pull the string from config
-        buf.writeString("test_dungeon:base_lab");
+        buf.writeString(gson.toJson(zoneData));
     }
 }

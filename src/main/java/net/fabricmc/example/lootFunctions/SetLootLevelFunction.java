@@ -32,7 +32,7 @@ public class SetLootLevelFunction extends ConditionalLootFunction {
 
     @Override
     protected ItemStack process(ItemStack itemStack, LootContext context) {
-        // Get the player entity that is openning the loot
+        // Get the player entity that is opening the loot
         Entity player = context.get(LootContextParameters.THIS_ENTITY);
         if (player == null) {
             return itemStack;

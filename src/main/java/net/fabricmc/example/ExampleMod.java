@@ -15,6 +15,7 @@ import net.fabricmc.example.inventories.ConfigLabyrinthTableGui;
 import net.fabricmc.example.inventories.LabyrinthTableGui;
 import net.fabricmc.example.items.ItemLoader;
 import net.fabricmc.example.lootFunctions.SetLootLevelFunction;
+import net.fabricmc.example.processors.CleanupProcessor;
 import net.fabricmc.example.processors.JigsawProcessor;
 import net.fabricmc.example.processors.SpawnProcessor;
 import net.fabricmc.fabric.api.loot.v1.event.LootTableLoadingCallback;
@@ -33,6 +34,7 @@ public class ExampleMod implements ModInitializer {
 	public static final String modId = "labyrinth";
 	public static ScreenHandlerType<ConfigLabyrinthTableGui> CONFIG_LABYRINTH_SCREEN_HANDLER_TYPE;
 	public static ScreenHandlerType<LabyrinthTableGui> LABYRINTH_SCREEN_HANDLER_TYPE;
+	public static StructureProcessorType<CleanupProcessor> CLEANUP_PROCESSOR = () -> CleanupProcessor.CODEC;
 	public static StructureProcessorType<JigsawProcessor> JIGSAW_PROCESSOR = () -> JigsawProcessor.CODEC;
 	public static StructureProcessorType<SpawnProcessor> SPAWN_PROCESSOR = () -> SpawnProcessor.CODEC;
 
@@ -56,19 +58,20 @@ public class ExampleMod implements ModInitializer {
 
 		// LootFunctionType.register();
 
-		// LootTableLoadingCallback.EVENT.register((resourceManager, lootManager, id, table, setter) -> {
-		// 	if (id.toString().startsWith("test_dungeon")) {
-		// 		table.withFunction(SetLootLevelFunction.builder(ConstantLootNumberProvider.create(2.0f)).build());
-		// 		// LootTable lootTable = lootManager.getTable(new Identifier("test_dungeon:chests/test_loot"));
-		// 		// lootTable.
-		// 		// table.withPool(table.build());
-		// 	}
-		// 	// System.out.println();
-		// 	// table.getPools();
-		// 	// table = FabricLootSupplierBuilder.of(lootManager.getTable(id));
-		// });
+		LootTableLoadingCallback.EVENT.register((resourceManager, lootManager, id, table, setter) -> {
+			if (id.toString().startsWith("test_dungeon")) {
+				System.out.println("Hit the loot table: " + id.toString());
+				table.withFunction(SetLootLevelFunction.builder(ConstantLootNumberProvider.create(2.0f)).build());
+				// LootTable lootTable = lootManager.getTable(new Identifier("test_dungeon:chests/test_loot"));
+				// lootTable.
+				// table.withPool(table.build());
+			}
+			// table.getPools();
+			// table = FabricLootSupplierBuilder.of(lootManager.getTable(id));
+		});
 
 		Registry.register(Registry.STRUCTURE_PROCESSOR, new Identifier(modId, "jigsaw_processor"), JIGSAW_PROCESSOR);
+		Registry.register(Registry.STRUCTURE_PROCESSOR, new Identifier(modId, "cleanup_processor"), CLEANUP_PROCESSOR);
 
 		LoadConfig initConfig = new LoadConfig(modId);
 		initConfig.readConfigFromFile();

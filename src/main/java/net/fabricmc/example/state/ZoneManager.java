@@ -1,5 +1,6 @@
 package net.fabricmc.example.state;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import java.util.UUID;
 import net.fabricmc.example.config.LoadConfig;
 import net.fabricmc.example.config.StructurePoolConfig;
 import net.fabricmc.example.config.ZoneConfig;
+import net.fabricmc.example.processors.CleanupProcessor;
 import net.fabricmc.example.processors.JigsawProcessor;
 import net.fabricmc.example.processors.SpawnProcessor;
 import net.fabricmc.example.structure.StructureBuildQueue;
@@ -17,6 +19,11 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.JigsawBlock;
 import net.minecraft.block.entity.JigsawBlockEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.attribute.EntityAttributeModifier;
+import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.Structure;
@@ -29,9 +36,12 @@ import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Direction.Axis;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
+import net.minecraft.world.dimension.DimensionType;
 
 public class ZoneManager {
     // Active Labyrinths
@@ -43,33 +53,59 @@ public class ZoneManager {
         ZoneManager.activeZones.put(key, lab);
     }
 
-    public static int getActiveZonesInWorld(String worldName) {
-        int activeZoneCount = 0;
+    public static void cleanupZone(UUID zoneId) {
+        ZoneManager.activeZones.remove(zoneId);
+    }
+
+    public static Map<Integer, Zone> getActiveZonesInWorld(String worldName) {
+        HashMap<Integer, Zone> activeZones = new HashMap<Integer, Zone>();
         for (Zone zoneConf : ZoneManager.activeZones.values()) {
             if (zoneConf.getDimentionType().equals(worldName)) {
-                activeZoneCount++;
+                activeZones.put(zoneConf.getInstanceKey(), zoneConf);
             }
         }
 
-        return activeZoneCount;
+        return activeZones;
+    }
+
+    public static int getNextInstanceKeyInWorld(String worldName) {
+        Map<Integer, Zone> activeZones = ZoneManager.getActiveZonesInWorld(worldName);
+        int nextInstanceKey = 0;
+        for (int instanceKey : activeZones.keySet()) {
+            if (instanceKey == nextInstanceKey) {
+                nextInstanceKey++;
+            }
+        }
+
+        return nextInstanceKey;
     }
 
     public static Zone getZone(UUID key) {
         return ZoneManager.activeZones.get(key);
     }
 
-    public static Optional<Zone> generateZone(World world, PlayerEntity player, String zoneName) {
+    public static Zone getZoneAtLocation(DimensionType dimType, BlockPos blockPos) {
+        for (Zone zone : ZoneManager.activeZones.values()) {
+            if (zone.matchEntryPoint(dimType, blockPos)) {
+                return zone;
+            };
+        }
+
+        return null;
+    }
+
+    public static Optional<Zone> generateZone(World world, PlayerEntity player, BlockPos blockPos, String zoneName) {
         if (world.isClient) {
             return Optional.ofNullable(null);
         }
 
         // Create new Zone
         ZoneConfig zoneConfig = LoadConfig.getZoneConfig(zoneName);
-        zoneConfig.worldType = zoneConfig.worldType != null ? zoneConfig.worldType : "labyrinth:labyrinth";
-        int activeZones = ZoneManager.getActiveZonesInWorld(zoneConfig.worldType);
+        zoneConfig.dimentionType = zoneConfig.dimentionType != null ? zoneConfig.dimentionType : "labyrinth:labyrinth";
+        int nextInstanceKey = ZoneManager.getNextInstanceKeyInWorld(zoneConfig.dimentionType);
         
-        // openZones * offset
-        BlockPos startLocation = new BlockPos(activeZones * 16, zoneConfig.worldHeight, 0);
+        // nextInstanceKey is used to place the startlocation so zones don't overlap
+        BlockPos startLocation = new BlockPos(0, zoneConfig.worldHeight, nextInstanceKey * 16);
         
         
         // TODO: load the block from config
@@ -77,15 +113,15 @@ public class ZoneManager {
         // TODO: load maxdepth from config
         structConfig.setMaxDepth(5);
 
-
-        Zone zone = new Zone(zoneConfig.worldType, 1);
+        DimensionType openedInDimension = player.getWorld().getDimension();
+        Zone zone = new Zone(zoneConfig, openedInDimension, blockPos, nextInstanceKey, 6);
         zone.addBuildConfig(structConfig);
         ZoneManager.activeZones.put(zone.getId(), zone);
         // set start pos by checking existing in the biome
 
         ServerWorld serverWorld = (ServerWorld) world;
         for (RegistryKey<World> server : world.getServer().getWorldRegistryKeys()) {
-            if (server.getValue().equals(new Identifier(zoneConfig.worldType))) {
+            if (server.getValue().equals(new Identifier(zoneConfig.dimentionType))) {
                 serverWorld = world.getServer().getWorld(server);
                 zone.setWorld(serverWorld);
             }
@@ -98,9 +134,11 @@ public class ZoneManager {
             Structure startStructure = structure.get();
             StructurePlacementData placementData = new StructurePlacementData().setMirror(BlockMirror.NONE);
 
-            // Add the config processor
+            structConfig.createNextRoom(false); // add a new room before processing
+            // Add the config processors
             placementData.addProcessor(new JigsawProcessor(structConfig));
             placementData.addProcessor(new SpawnProcessor(structConfig));
+            placementData.addProcessor(new CleanupProcessor(structConfig));
 
             // Place the Start Structure
             startStructure.place(serverWorld, startLocation, null, placementData, ZoneManager.random, 0);
@@ -129,7 +167,8 @@ public class ZoneManager {
 
                     // Get the target pool info
                     String targetPool = structureBlockInfo.nbt.getString(JigsawBlockEntity.POOL_KEY);
-                    if (depth == structConfig.maxDepth) {
+                    Boolean isBossRoom = depth == structConfig.maxDepth;
+                    if (isBossRoom) {
                         // if it's the last room, load the boss room
                         targetPool = zoneConfig.roomPools.bossRoom;
                     }
@@ -145,6 +184,7 @@ public class ZoneManager {
                         Optional<Structure> optPathStructure = structureManager
                                 .getStructure(new Identifier(structurePoolConfig.elements[rand].element.location));
                         if (optPathStructure.isPresent()) {
+                            structConfig.createNextRoom(isBossRoom); // add a new room before processing
 
                             // Initialize the Structure to place for this jigsaw block
                             Structure pathStructure = optPathStructure.get();
@@ -156,6 +196,7 @@ public class ZoneManager {
                                 .setMirror(BlockMirror.NONE);
                             pathPlacementData.addProcessor(new JigsawProcessor(structConfig));
                             pathPlacementData.addProcessor(new SpawnProcessor(structConfig));
+                            pathPlacementData.addProcessor(new CleanupProcessor(structConfig));
 
                             // Get the target Jigsaw blocks in the chosen structure
                             List<StructureBlockInfo> structBlocks = pathStructure
@@ -187,10 +228,6 @@ public class ZoneManager {
                                 BlockPos shift = new BlockPos(xDiff, yDiff, zDiff);
                                 BlockPos updatedPos = structBlockPos.add(shift);
                                 pathStructure.place(serverWorld, updatedPos, null, pathPlacementData, ZoneManager.random, 0);
-
-                                // Remove the Jigsaw Blocks
-                                // world.setBlockState(structBlockPos, Registry.BLOCK.get(new Identifier("air")).getDefaultState());
-                                // world.setBlockState(structureBlockInfo.pos, Registry.BLOCK.get(new Identifier("air")).getDefaultState());
                             }
                         }
                     }

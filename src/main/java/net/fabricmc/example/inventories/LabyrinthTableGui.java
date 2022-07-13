@@ -3,6 +3,8 @@ package net.fabricmc.example.inventories;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gson.Gson;
+
 import io.github.cottonmc.cotton.gui.SyncedGuiDescription;
 import io.github.cottonmc.cotton.gui.networking.NetworkSide;
 import io.github.cottonmc.cotton.gui.networking.ScreenNetworking;
@@ -14,8 +16,8 @@ import io.github.cottonmc.cotton.gui.widget.data.Insets;
 import net.fabricmc.example.ExampleMod;
 import net.fabricmc.example.Util;
 import net.fabricmc.example.gui.Selection;
+import net.fabricmc.example.inventories.data.CurrentZoneData;
 import net.fabricmc.example.state.Zone;
-import net.fabricmc.example.state.ZoneManager;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.SimpleInventory;
@@ -24,6 +26,7 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 
 public class LabyrinthTableGui extends SyncedGuiDescription {
     public static String clientDataEvent = "inv_data";
@@ -31,12 +34,25 @@ public class LabyrinthTableGui extends SyncedGuiDescription {
     public Identifier playerEnterEventId;
     public Boolean selected = false;
     public List<Selection> selections = new ArrayList<>();
+    public Boolean activeZone = false;
+    public WGridPanel root;
     public String zoneId;
+    public BlockPos blockPos;
     public Zone zone;
 
     public LabyrinthTableGui(int syncId, PlayerInventory playerInventory, PacketByteBuf buf) {
         this(syncId, playerInventory, new SimpleInventory(1));
-        this.zoneId = buf.readString();
+        Gson gson = new Gson();
+        String data = buf.readString();
+        CurrentZoneData zoneData = gson.fromJson(data, CurrentZoneData.class);
+        this.activeZone = zoneData.active;
+        this.zoneId = zoneData.zoneName;
+        this.blockPos = zoneData.blockPos;
+
+        System.out.println("UI: " + data);
+        if (this.activeZone) {
+            this.addJoinButton();
+        }
     }
 
     public LabyrinthTableGui(int syncId, PlayerInventory playerInventory, Inventory inventory) {
@@ -61,13 +77,15 @@ public class LabyrinthTableGui extends SyncedGuiDescription {
             });
         }
 
-        WGridPanel root = new WGridPanel(1);
+        this.root = new WGridPanel(1);
         setRootPanel(root);
         root.setSize(178, 166);
         root.setInsets(Insets.ROOT_PANEL);
 
-        WItemSlot itemSlot = this.buildInputSlot(root);
-        root.add(itemSlot, 13, 36);
+        if (!this.activeZone) {
+            WItemSlot itemSlot = this.buildInputSlot(root);
+            root.add(itemSlot, 13, 36);
+        }
 
         // Adds the player inventory to the screen
         // So, aligned left and down a bit from the last cell rendered... I think
@@ -77,26 +95,27 @@ public class LabyrinthTableGui extends SyncedGuiDescription {
         root.validate(this);
     }
 
-    public void addJoinButton(WGridPanel root) {
+    public void addJoinButton() {
+        System.out.println("AddJoinButton Rendered");
+        this.selections.forEach((selection) -> {
+            this.root.remove(selection);
+        });
         WButton button = new WButton(new LiteralText("Enter"));
         button.setOnClick(() -> {
             ScreenNetworking.of(this, NetworkSide.CLIENT).send(this.playerEnterEventId,
                 buf -> buf.writeString(this.zoneId));
         });
-        root.add(button, 72, 31, 80, 20);
+        this.root.add(button, 72, 31, 80, 20);
     }
 
-    public void bonusSelectedHandler(WGridPanel root, List<Selection> selections, String value) {
+    public void bonusSelectedHandler(WGridPanel root, String value) {
         // propertyDelegate.set(0, 1);
         System.out.println("Clicked on: " + value);
-        selections.forEach((selection) -> {
-            root.remove(selection);
-        });
+        this.addJoinButton();
 
         ScreenNetworking.of(this, NetworkSide.CLIENT).send(this.selectEventId,
                 buf -> buf.writeString(this.zoneId));
 
-        this.addJoinButton(root);
     }
 
     public WItemSlot buildInputSlot(WGridPanel root) {
@@ -106,7 +125,7 @@ public class LabyrinthTableGui extends SyncedGuiDescription {
         // TODO: make this configable
         inputItemSlot.setFilter(stack -> stack.getItem() == Items.MAP);
         inputItemSlot.addChangeListener((slot, inventory, index, stack) -> {
-            if (index == 0 && !stack.isEmpty() && !this.selected) {
+            if (index == 0 && !stack.isEmpty() && !this.selected && !this.activeZone) {
                 // reset the selections
                 this.selections = new ArrayList<>();
                 for (int i = 0; i < 3; i++) {
@@ -116,7 +135,7 @@ public class LabyrinthTableGui extends SyncedGuiDescription {
                     optionOne.setSubText(new LiteralText(Integer.toString(((i + 1) * 2))));
                     String test = "" + 5 * i;
                     optionOne.setOnClick(() -> {
-                        this.bonusSelectedHandler(root, this.selections, test);
+                        this.bonusSelectedHandler(root, test);
                     });
                     root.add(optionOne, 62, 12 + (i * 19), 100, 19);
                 }
@@ -124,7 +143,7 @@ public class LabyrinthTableGui extends SyncedGuiDescription {
                 selections.forEach((selection) -> {
                     root.remove(selection);
                 });
-                this.selections = new ArrayList<>();
+                this.selections = new ArrayList<>(); 
             }
         });
 
