@@ -41,9 +41,12 @@ public class SpawnProcessor extends StructureProcessor {
 
         // Chest shit
         if (state.isOf(Blocks.CHEST)) {
-            NbtCompound nbt = structureBlockInfo.nbt;
-            // TODO: Pull the lootTable from configs
-            nbt.putString("LootTable", "test_dungeon:chests/test_loot");
+            this.config.addChestToCurrentRoom(structureBlockInfo.pos);
+            // NbtCompound nbt = structureBlockInfo.nbt;
+            // // TODO: Pull the lootTable from configs
+            // nbt.putString("LootTable", "test_dungeon:chests/test_loot");
+
+            // just tracking the chest location to add lootTable later
         }
 
         // Spawner shit

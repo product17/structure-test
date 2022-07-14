@@ -8,11 +8,12 @@ import java.util.Random;
 import java.util.TreeSet;
 
 public class MobConfig {
+  public List<MobDefinition> bossList = new ArrayList<>();
   public List<MobDefinition> mobList = new ArrayList<>();
 
-  public MobDefinition getRandomMob(int level) {
+  public MobDefinition getRandomMob(int level, Boolean isBoss) {
     Map<Integer, MobDefinition> weightedList = new HashMap<>();
-    for (MobDefinition mobDefinition : mobList) {
+    for (MobDefinition mobDefinition : isBoss ? bossList : mobList) {
       if (!LevelRange.matchLevel(level, mobDefinition.levelRange)) {
         // Skip if does not match levelRange
         continue;

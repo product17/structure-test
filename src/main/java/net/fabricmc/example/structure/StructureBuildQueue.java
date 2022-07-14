@@ -51,6 +51,13 @@ public class StructureBuildQueue {
         StructureBuildQueue.mainPathQueue.add(mainPathEntity);
     }
 
+    public void addChestToCurrentRoom(BlockPos pos) {
+        RoomData room = getCurrentRoom();
+        if (room != null) {
+            room.chestPositions.add(pos);
+        }
+    }
+
     public void addMobToCurrentRoom(BlockPos pos) {
         RoomData room = getCurrentRoom();
         if (room != null) {

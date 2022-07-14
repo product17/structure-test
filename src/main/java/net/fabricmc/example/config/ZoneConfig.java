@@ -5,6 +5,7 @@ import java.util.List;
 
 public class ZoneConfig {
     public List<LootTier> defaultLootTables = new ArrayList<>();
+    public List<LootTier> chestLootTables = new ArrayList<>();
     public String lootPools;
     public MobConfig mobs;
     public String name;
