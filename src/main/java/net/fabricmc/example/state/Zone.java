@@ -148,6 +148,10 @@ public class Zone {
         return false;
     }
 
+    public Boolean canUseElytra() {
+        return this.zoneConfig.elytraAllowed;
+    }
+
     public List<BlockPos> getBlockList() {
         return this.buildConfig.blockList;
     }

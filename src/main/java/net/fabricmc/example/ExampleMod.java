@@ -1,6 +1,7 @@
 package net.fabricmc.example;
 
 import java.io.InputStream;
+import java.util.UUID;
 
 import com.google.gson.Gson;
 
@@ -20,6 +21,7 @@ import net.fabricmc.example.processors.JigsawProcessor;
 import net.fabricmc.example.processors.SpawnProcessor;
 import net.fabricmc.example.state.Zone;
 import net.fabricmc.example.state.ZoneManager;
+import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.loot.v1.event.LootTableLoadingCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -28,7 +30,9 @@ import net.fabricmc.fabric.api.screenhandler.v1.ScreenHandlerRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ElytraItem;
 import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
@@ -89,6 +93,15 @@ public class ExampleMod implements ModInitializer {
 			if (!player.isCreative() && zone != null) {
 				return zone.canBreakBlock(player, blockState);
 			}
+			return true;
+		});
+
+		EntityElytraEvents.ALLOW.register((LivingEntity entity) -> {
+			Zone zone = ZoneManager.getZoneByPlayerId(entity.getUuid());
+			if (zone != null) {
+				return zone.canUseElytra();
+			}
+
 			return true;
 		});
 
