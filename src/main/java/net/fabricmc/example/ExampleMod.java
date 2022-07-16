@@ -18,17 +18,26 @@ import net.fabricmc.example.lootFunctions.SetLootLevelFunction;
 import net.fabricmc.example.processors.CleanupProcessor;
 import net.fabricmc.example.processors.JigsawProcessor;
 import net.fabricmc.example.processors.SpawnProcessor;
+import net.fabricmc.example.state.Zone;
+import net.fabricmc.example.state.ZoneManager;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.loot.v1.event.LootTableLoadingCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.fabricmc.fabric.api.screenhandler.v1.ScreenHandlerRegistry;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.screen.ScreenHandlerType;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.world.World;
 
 public class ExampleMod implements ModInitializer {
 	public static final String modId = "labyrinth";
@@ -72,6 +81,16 @@ public class ExampleMod implements ModInitializer {
 
 		Registry.register(Registry.STRUCTURE_PROCESSOR, new Identifier(modId, "jigsaw_processor"), JIGSAW_PROCESSOR);
 		Registry.register(Registry.STRUCTURE_PROCESSOR, new Identifier(modId, "cleanup_processor"), CLEANUP_PROCESSOR);
+
+		PlayerBlockBreakEvents.BEFORE.register((World world, PlayerEntity player, BlockPos blockPos, BlockState blockState, BlockEntity entity) -> {
+			Zone zone = ZoneManager.getZoneByPlayerId(player.getUuid());
+
+			// If the player is not in create and is in a Zone, check
+			if (!player.isCreative() && zone != null) {
+				return zone.canBreakBlock(player, blockState);
+			}
+			return true;
+		});
 
 		LoadConfig initConfig = new LoadConfig(modId);
 		initConfig.readConfigFromFile();

@@ -7,24 +7,19 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
 
-import org.apache.commons.compress.compressors.lz77support.LZ77Compressor.Block.BlockType;
-
 import net.fabricmc.example.config.MobDefinition;
 import net.fabricmc.example.config.ZoneConfig;
 import net.fabricmc.example.structure.RoomData;
 import net.fabricmc.example.structure.StructureBuildQueue;
+import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.block.entity.BlockEntityType;
 import net.minecraft.block.entity.ChestBlockEntity;
-import net.minecraft.enchantment.ThornsEnchantment;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArmorItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -38,6 +33,7 @@ import net.minecraft.world.dimension.DimensionType;
 
 public class Zone {
     private BlockPos blockPos;
+    private List<Block> breakableBlocks;
     private StructureBuildQueue buildConfig;
     private int difficulty = 0;
     private String dimentionType;
@@ -123,6 +119,30 @@ public class Zone {
             }
 
             return true;
+        }
+
+        return false;
+    }
+
+    public Boolean canBreakBlock(PlayerEntity player, BlockState blockState) {
+        if (this.zoneConfig.breakableBlocks.size() > 0) {
+            if (this.breakableBlocks == null) {
+                this.breakableBlocks = new ArrayList<>();
+                for (String blockName : this.zoneConfig.breakableBlocks) {
+                    this.breakableBlocks.add(Registry.BLOCK.get(new Identifier(blockName)));
+                }
+            }
+
+            for (Block breakableBlock : this.breakableBlocks) {
+                if (blockState.isOf(breakableBlock)) {
+                    return true;
+                }
+            }
+
+            String msg = String.join(", ", this.zoneConfig.breakableBlocks);
+            LiteralText text = new LiteralText("Can only Break: " + msg);
+            player.sendMessage(text, true);
+            return false;
         }
 
         return false;
@@ -220,6 +240,8 @@ public class Zone {
                         EntityAttributeModifier.Operation.MULTIPLY_TOTAL
                     )
                 );
+
+                // Mobs need to be healed if their life is increased
                 mob.heal(mob.getMaxHealth());
             }
 
