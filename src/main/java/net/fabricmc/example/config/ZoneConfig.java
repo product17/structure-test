@@ -8,6 +8,7 @@ public class ZoneConfig {
     public List<String> breakableBlocks = new ArrayList<>();
     public List<LootTier> chestLootTables = new ArrayList<>();
     public List<LootTier> defaultLootTables = new ArrayList<>();
+    public Boolean keepInventoryOnDeath = false;
     public String lootPools;
     public MobConfig mobs;
     public String name;

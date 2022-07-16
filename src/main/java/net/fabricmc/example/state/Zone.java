@@ -68,9 +68,10 @@ public class Zone {
             return false;
         }
 
-        this.players.add(player);
         if (this.world != null) {
+            this.players.add(player);
             ServerPlayerEntity servPlayer = (ServerPlayerEntity)player;
+            
             // servPlayer.set
             // player.nbt
             this.previousPlayerPositions.put(
@@ -81,9 +82,7 @@ public class Zone {
                 )
             );
 
-            int index = new Random().nextInt(this.buildConfig.spawnPositions.size());
-            BlockPos spawnLoc = this.buildConfig.spawnPositions.get(index);
-            servPlayer.teleport(this.world, spawnLoc.getX() + 0.5, spawnLoc.getY() + 1, spawnLoc.getZ() + 0.5, player.getYaw(), player.getPitch());
+            this.teleportToZoneEntrance(servPlayer);
 
             if (!this.hasSpawnedMobsAndChests) {
                 for (RoomData room : this.buildConfig.rooms) {
@@ -272,6 +271,10 @@ public class Zone {
         this.emptyTicks = 0;
     }
 
+    public void respawnPlayer(ServerPlayerEntity player) {
+        this.teleportToZoneEntrance(player);
+    }
+
     public void incrementEmptyTicks() {
         this.emptyTicks++;
         if (this.emptyTicks >= this.emptyTicksMax) {
@@ -295,5 +298,24 @@ public class Zone {
 
     public void setWorld(ServerWorld world) {
         this.world = world;
+    }
+
+    public Boolean shouldKeepInventory(UUID playerId) {
+        // TODO: do some kind of death count on the player
+        // if they exceed that they will die and lose their stuff
+        return this.zoneConfig.keepInventoryOnDeath;
+    }
+
+    public void teleportToZoneEntrance(ServerPlayerEntity player) {
+        int randomPos = this.random.nextInt(this.buildConfig.spawnPositions.size());
+        BlockPos spawnLoc = this.buildConfig.spawnPositions.get(randomPos);
+        player.teleport(
+            this.world,
+            spawnLoc.getX() + 0.5,
+            spawnLoc.getY() + 1,
+            spawnLoc.getZ() + 0.5,
+            player.getYaw(),
+            player.getPitch()
+        );
     }
 }

@@ -22,6 +22,7 @@ import net.fabricmc.example.processors.SpawnProcessor;
 import net.fabricmc.example.state.Zone;
 import net.fabricmc.example.state.ZoneManager;
 import net.fabricmc.fabric.api.entity.event.v1.EntityElytraEvents;
+import net.fabricmc.fabric.api.entity.event.v1.ServerPlayerEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.loot.v1.event.LootTableLoadingCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -37,6 +38,7 @@ import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
 import net.minecraft.screen.ScreenHandlerType;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.structure.processor.StructureProcessorType;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
@@ -94,6 +96,23 @@ public class ExampleMod implements ModInitializer {
 				return zone.canBreakBlock(player, blockState);
 			}
 			return true;
+		});
+
+		// This tails the respawn event and can probably be used to teleport the player
+		ServerPlayerEvents.AFTER_RESPAWN.register((
+			ServerPlayerEntity oldPlayer,
+			ServerPlayerEntity newPlayer,
+			boolean alive
+		) -> {
+			Zone zone = ZoneManager.getZoneByPlayerId(newPlayer.getUuid());
+			if (zone != null) {
+				if (zone.shouldKeepInventory(newPlayer.getUuid())) {
+					newPlayer.getInventory().clone(oldPlayer.getInventory());
+				}
+
+				// respawn in the Zone
+				zone.respawnPlayer(newPlayer);
+			}
 		});
 
 		EntityElytraEvents.ALLOW.register((LivingEntity entity) -> {
