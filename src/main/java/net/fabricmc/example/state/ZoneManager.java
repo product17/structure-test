@@ -1,6 +1,5 @@
 package net.fabricmc.example.state;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,26 +18,19 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.block.JigsawBlock;
 import net.minecraft.block.entity.JigsawBlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.attribute.EntityAttributeModifier;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.structure.Structure;
+import net.minecraft.structure.Structure.StructureBlockInfo;
 import net.minecraft.structure.StructureManager;
 import net.minecraft.structure.StructurePlacementData;
-import net.minecraft.structure.Structure.StructureBlockInfo;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.BlockMirror;
 import net.minecraft.util.BlockRotation;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.Direction.Axis;
-import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 import net.minecraft.world.dimension.DimensionType;
@@ -46,6 +38,7 @@ import net.minecraft.world.dimension.DimensionType;
 public class ZoneManager {
     // Active Labyrinths
     private static Map<UUID, Zone> activeZones = new HashMap<>();
+    private static Map<UUID, Zone> mobToZoneMap = new HashMap<>();
     private static Map<UUID, UUID> playerToZoneMap = new HashMap<>();
     private static Random random = new Random();
     
@@ -280,6 +273,23 @@ public class ZoneManager {
 
         // If it's not the same, rotate countClockwise
         return BlockRotation.COUNTERCLOCKWISE_90;
+    }
+
+    public static Zone getZoneByMobId(UUID mobId) {
+        return ZoneManager.mobToZoneMap.get(mobId);
+    }
+
+    public static void mapMobToZone(UUID mobId, Zone zone) {
+        ZoneManager.mobToZoneMap.put(mobId, zone);
+    }
+
+    public static void removeMobFromZones(UUID mobId) {
+        Zone zone = ZoneManager.getZoneByMobId(mobId);
+        if (zone != null) {
+            zone.removeMobById(mobId);
+        }
+
+        ZoneManager.mobToZoneMap.remove(mobId);
     }
 
     public static Zone getZoneByPlayerId(UUID playerId) {

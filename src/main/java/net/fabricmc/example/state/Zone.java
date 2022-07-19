@@ -3,9 +3,12 @@ package net.fabricmc.example.state;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.UUID;
+
+import org.lwjgl.system.CallbackI.P;
 
 import net.fabricmc.example.config.MobDefinition;
 import net.fabricmc.example.config.ZoneConfig;
@@ -43,9 +46,11 @@ public class Zone {
     private UUID id = UUID.randomUUID();
     private int instanceKey;
     private Boolean hasSpawnedMobsAndChests = false;
+    private Map<UUID, Room> mobToRoomMap = new HashMap<>();
     private List<PlayerEntity> players = new ArrayList<>();
     private HashMap<UUID, PreviousPos> previousPlayerPositions = new HashMap<>();
     private Random random = new Random();
+    private List<Room> rooms = new ArrayList<>();
     private ServerWorld world;
     private ZoneConfig zoneConfig;
     
@@ -71,9 +76,7 @@ public class Zone {
         if (this.world != null) {
             this.players.add(player);
             ServerPlayerEntity servPlayer = (ServerPlayerEntity)player;
-            
-            // servPlayer.set
-            // player.nbt
+
             this.previousPlayerPositions.put(
                 servPlayer.getUuid(),
                 new PreviousPos(
@@ -85,16 +88,11 @@ public class Zone {
             this.teleportToZoneEntrance(servPlayer);
 
             if (!this.hasSpawnedMobsAndChests) {
-                for (RoomData room : this.buildConfig.rooms) {
-                    // if last room
-                    if (room.isBossRoom) {
-                        BlockPos bossPos = room.mobPositions.remove(0);
-                        List<BlockPos> bossPlaces = new ArrayList<>();
-                        bossPlaces.add(bossPos);
-                        this.placeMobs(bossPlaces, true);
-                    }
+                for (RoomData roomData : this.buildConfig.rooms) {
+                    Room room = new Room();
+                    this.rooms.add(room);
 
-                    for (BlockPos chestPos : room.chestPositions) {
+                    for (BlockPos chestPos : roomData.chestPositions) {
                         Optional<ChestBlockEntity> chestOpt = world.getBlockEntity(chestPos, BlockEntityType.CHEST);
                         if (chestOpt.isPresent()) {
                             String chestLootTable = ZoneConfig.getLootTableAtLevel(this.difficulty, zoneConfig.defaultLootTables);
@@ -110,8 +108,15 @@ public class Zone {
                         }
                     }
 
+                    // Place the boss and remove one spawn location
+                    if (roomData.isBossRoom) {
+                        this.placeMob(room, roomData.mobPositions.remove(0), true);
+                    }
+
                     // Place all mobs for each room
-                    this.placeMobs(room.mobPositions, false);
+                    for (BlockPos spawnPos : roomData.mobPositions) {
+                        this.placeMob(room, spawnPos, false);
+                    }
                 }
 
                 this.hasSpawnedMobsAndChests = true;
@@ -183,6 +188,20 @@ public class Zone {
         return this.instanceKey;
     }
 
+    public MobDetails getMobById(UUID mobId) {
+        Room room = this.mobToRoomMap.get(mobId);
+        if (room != null) {
+            MobDetails mobDetails = room.mobs.get(mobId);
+            if (mobDetails == null) {
+                mobDetails = room.bosses.get(mobId);
+            }
+
+            return mobDetails;
+        }
+
+        return null;
+    }
+
     public int getPlayerCount() {
         return players.size();
     }
@@ -195,61 +214,80 @@ public class Zone {
         return this.generatedFromDimensionType.equals(dimType) && this.blockPos.equals(blockPos);
     }
 
-    private void placeMobs(List<BlockPos> mobPositions, Boolean isBoss) {
-        for (BlockPos spawnPos : mobPositions) {
-            MobDefinition mobDefinition = this.zoneConfig.mobs.getRandomMob(this.difficulty, isBoss);
-            EntityType<?> entity = Registry.ENTITY_TYPE.get(new Identifier(mobDefinition.mobType));
-            
-            MobEntity mob = (MobEntity)entity.create((World)world);
-            mob.setCustomName(new LiteralText(isBoss ? "Da Boss" : "Walker"));
 
-            String lootTable = ZoneConfig.getLootTableAtLevel(this.difficulty, zoneConfig.defaultLootTables);
-            if (mobDefinition.lootTables != null) {
-                String hasLootForDifficulty = ZoneConfig.getLootTableAtLevel(this.difficulty, mobDefinition.lootTables);
-                if (hasLootForDifficulty != null) {
-                    lootTable = hasLootForDifficulty;
-                }
+    // Takes a room and list of pos, choses and removes pos
+    private void placeMob(Room room, BlockPos spawnPos, Boolean isBoss) {
+        MobDetails mobDetails = new MobDetails();
+        MobDefinition mobDefinition = this.zoneConfig.mobs.getRandomMob(this.difficulty, isBoss);
+        EntityType<?> entity = Registry.ENTITY_TYPE.get(new Identifier(mobDefinition.mobType));
+        MobEntity mob = (MobEntity)entity.create((World)world);
+
+        mobDetails.expMultiplier = mobDefinition.xpMultiplier != null ? mobDefinition.xpMultiplier : 0;
+        mob.setCustomName(new LiteralText(isBoss ? "Da Boss" : "Walker"));
+
+        String lootTable = ZoneConfig.getLootTableAtLevel(this.difficulty, zoneConfig.defaultLootTables);
+        if (mobDefinition.lootTables != null) {
+            String hasLootForDifficulty = ZoneConfig.getLootTableAtLevel(this.difficulty, mobDefinition.lootTables);
+            if (hasLootForDifficulty != null) {
+                lootTable = hasLootForDifficulty;
             }
+        }
 
-            // Add loottable if exists
-            if (lootTable != null) {
-                NbtCompound nbt = new NbtCompound();
-                nbt.putString("DeathLootTable", lootTable);
-                nbt.putLong("DeathLootTableSeed", (new Random()).nextLong());
-                mob.readNbt(nbt);
-            }
+        // Add loottable if exists
+        if (lootTable != null) {
+            NbtCompound nbt = new NbtCompound();
+            nbt.putString("DeathLootTable", lootTable);
+            nbt.putLong("DeathLootTableSeed", (new Random()).nextLong());
+            mob.readNbt(nbt);
+        }
 
-            // Boost the damage
-            if (mobDefinition.damageMultiplier != null) {
-                mob.getAttributeInstance(
-                    EntityAttributes.GENERIC_ATTACK_DAMAGE
-                ).addPersistentModifier(
-                    new EntityAttributeModifier(
-                        "damageMultiplier",
-                        this.difficulty * mobDefinition.damageMultiplier,
-                        EntityAttributeModifier.Operation.MULTIPLY_TOTAL
-                    )
-                );
-            }
+        // Boost the damage
+        if (mobDefinition.damageMultiplier != null) {
+            mob.getAttributeInstance(
+                EntityAttributes.GENERIC_ATTACK_DAMAGE
+            ).addPersistentModifier(
+                new EntityAttributeModifier(
+                    "damageMultiplier",
+                    this.difficulty * mobDefinition.damageMultiplier,
+                    EntityAttributeModifier.Operation.MULTIPLY_TOTAL
+                )
+            );
+        }
 
-            // Boost the health
-            if (mobDefinition.healthMultiplier != null) {
-                mob.getAttributeInstance(
-                    EntityAttributes.GENERIC_MAX_HEALTH
-                ).addPersistentModifier(
-                    new EntityAttributeModifier(
-                        "healthMultiplier",
-                        this.difficulty * mobDefinition.healthMultiplier,
-                        EntityAttributeModifier.Operation.MULTIPLY_TOTAL
-                    )
-                );
+        // Boost the health
+        if (mobDefinition.healthMultiplier != null) {
+            mob.getAttributeInstance(
+                EntityAttributes.GENERIC_MAX_HEALTH
+            ).addPersistentModifier(
+                new EntityAttributeModifier(
+                    "healthMultiplier",
+                    this.difficulty * mobDefinition.healthMultiplier,
+                    EntityAttributeModifier.Operation.MULTIPLY_TOTAL
+                )
+            );
 
-                // Mobs need to be healed if their life is increased
-                mob.heal(mob.getMaxHealth());
-            }
+            // Mobs need to be healed if their life is increased
+            mob.heal(mob.getMaxHealth());
+        }
 
-            mob.setPosition(new Vec3d(spawnPos.getX(), spawnPos.getY() + 1, spawnPos.getZ()));
-            world.spawnEntity(mob);
+        mob.setPosition(new Vec3d(spawnPos.getX(), spawnPos.getY() + 1, spawnPos.getZ()));
+        world.spawnEntity(mob);
+        mobDetails.mob = mob;
+        if (isBoss) {
+            room.bosses.put(mob.getUuid(), mobDetails);
+        } else {
+            room.mobs.put(mob.getUuid(), mobDetails);
+        }
+
+        this.mobToRoomMap.put(mob.getUuid(), room);
+        ZoneManager.mapMobToZone(mob.getUuid(), this);
+    }
+
+    public void removeMobById(UUID mobId) {
+        Room room = this.mobToRoomMap.get(mobId);
+        if (room != null) {
+            room.mobs.remove(mobId);
+            room.bosses.remove(mobId);
         }
     }
 

@@ -7,7 +7,6 @@ import com.mojang.serialization.Codec;
 import net.fabricmc.example.structure.StructureBuildQueue;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.structure.Structure.StructureBlockInfo;
 import net.minecraft.structure.StructurePlacementData;
 import net.minecraft.structure.processor.StructureProcessor;
@@ -42,11 +41,6 @@ public class SpawnProcessor extends StructureProcessor {
         // Chest shit
         if (state.isOf(Blocks.CHEST)) {
             this.config.addChestToCurrentRoom(structureBlockInfo.pos);
-            // NbtCompound nbt = structureBlockInfo.nbt;
-            // // TODO: Pull the lootTable from configs
-            // nbt.putString("LootTable", "test_dungeon:chests/test_loot");
-
-            // just tracking the chest location to add lootTable later
         }
 
         // Spawner shit

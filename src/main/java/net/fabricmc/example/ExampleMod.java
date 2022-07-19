@@ -1,12 +1,11 @@
 package net.fabricmc.example;
 
 import java.io.InputStream;
-import java.util.UUID;
-
-import com.google.gson.Gson;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import com.google.gson.Gson;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.example.config.LoadConfig;
@@ -30,10 +29,8 @@ import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.fabricmc.fabric.api.screenhandler.v1.ScreenHandlerRegistry;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ElytraItem;
 import net.minecraft.loot.provider.number.ConstantLootNumberProvider;
 import net.minecraft.resource.ResourceManager;
 import net.minecraft.resource.ResourceType;
